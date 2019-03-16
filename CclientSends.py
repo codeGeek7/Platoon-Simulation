@@ -14,8 +14,7 @@ isKeyPressed = False
 def initialize():
     global isKeyPressed
     sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = socket.gethostbyname('fourier')
-#    host = socket.gethostname()
+    host = socket.gethostname()
     port = 6666
 
     try:
