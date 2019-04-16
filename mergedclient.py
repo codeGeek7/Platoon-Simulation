@@ -445,7 +445,7 @@ def setpos():
     lock.acquire()
     if myspeed < 0:
         myspeed = 0
-    mypos = (mypos + (myspeed * (1/36000)))
+    mypos = (mypos + (myspeed * (1/100000)))
     lock.release()
     # THIS NEEDS TO BE FIXED SO THAT UPDATED POSITION IS WITHIN THE WINDOW
 

@@ -205,7 +205,7 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
                     headway.append(float(0))
                     for o in range(len(dataList) - 1):
                         headway.append((float(dataList[o]) - float(dataList[o+1])))
-                    xp = 1200 - p*headway[p] 
+                    xp = 1000 - p*headway[p] 
                     carRect.center = (xp, start_y)
                     gameDisplay.blit(carImg, carRect)
                     pygame.display.update()
@@ -216,9 +216,9 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
                     tree[j] = 1600
             
 
-#        with lock:
+        with lock:
 #            print([float(dataList[0]) - float(dataList[1]), float(dataList[1]) - float(dataList[2])])
-#            print("POSITIONS RECEIVED: {}".format([float(value) for key, value in dataList.items()]))
+            print("POSITIONS RECEIVED: {}".format([float(value) for key, value in dataList.items()]))
             
         pygame.display.flip()
         clock.tick(120)
