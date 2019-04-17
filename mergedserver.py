@@ -7,7 +7,7 @@ Created on Wed Mar  6 17:06:22 2019
 """
 #-----------------------------------------------------------------------------
 # IMPORT PACKAGES
-import socket, sys, traceback, json, pygame, curses, time, os, struct, random
+import socket, sys, traceback, json, pygame, curses, time, os, struct, random, math
 from threading import Thread, RLock, Lock
 
 #-----------------------------------------------------------------------------
@@ -46,13 +46,13 @@ def server_connect():
         print("Bind failed. Error : " + str(sys.exc_info()))
         sys.exit()
 
-    print("SYSTEM: SERVER IS READY TO ACCEPT CLIENT CONNECTIONS.")
+    print("SYSTEM: Server is ready to accept connections.")
     sockfd.listen(10)
     clientID = 0
     
     leadConn, leadAdd = sockfd.accept()
-    print("Connection received from " + str(leadAdd[0]) + ":" + str(leadAdd[1]))
     clientID += 1
+    print("SYSTEM: Connection received from CLIENT " + str(clientID) + "with address " + str(leadAdd[0]) + ":" + str(leadAdd[1]))
     add_client_to_list(leadConn, clientID, leadAdd)
     recvOpt = leadConn.recv(1).decode("utf-8")
     if recvOpt == "0":
@@ -66,12 +66,12 @@ def server_connect():
             add_client_to_list(clientConn, clientID, clientAdd)
             clientIP = str(clientAdd[0])
             clientPort = str(clientAdd[1])
-            print("Connection received from " + clientIP + ":" + clientPort)
+            print("SYSTEM: Connection received from CLIENT " + str(clientID) + "with address " + clientIP + ":" + clientPort)
             recvOpt = clientConn.recv(1).decode("utf-8")
             if recvOpt == "0":
                 send_client_ID(clientConn, clientID)
         elif menu == "s":
-            print("Sending client list..")
+            print("SYSTEM: Sending client list to all clients.")
             send_client_list(clientList, clientSockList)
             break
         
@@ -140,7 +140,7 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
     carRect = carImg.get_rect()
 
     gameDisplay = pygame.display.set_mode((display_width, display_height))
-    pygame.display.set_caption('Simulator')
+    pygame.display.set_caption('P2P based Platton Simulator')
     gameDisplay.fill(white)
     clock = pygame.time.Clock()
     
@@ -158,8 +158,9 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
     
     startOfGame = True
     threadList = []
+    threadName = "receive position thread "
     for key, value in clientSockList.items():
-        threadList.append(Thread(target = receivePos, args = (value,key)))
+        threadList.append(Thread(target = receivePos, name = threadName + str(key),args = (value,key)))
         dataList[key-1] = ""
     for i in range(len(clientList)):
         threadList[i].start()
@@ -181,44 +182,51 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
 #                time.sleep(0.01)
                 gameDisplay.blit(carImg, carRect)
                 pygame.display.flip()
+            pygame.display.update()
             startOfGame = False
         
-        with lock:
-#            print("{} and sum = {}".format(speed, sum(speed.values())))
-            if sum(speed.values()) == 0:
-                treeSpeed = 0
-            else:
-                treeSpeed = 25
-            
-            for i in range(len(tree)):
-                tree[i] -= treeSpeed
-                
-            if prev < d:
-                for i in range(len(dataList)):
-                    carRect.center = (float(dataList[i]), start_y)
-                    gameDisplay.blit(carImg, carRect)
-                    pygame.display.update()
-            else:
+#        with lock:
+#        print("{} and sum = {}".format(speed.values(), sum(speed.values())))
+        if sum(speed.values()) == 0:
+            treeSpeed = 0
+        else:
+            treeSpeed = 4
         
-                for p in range(len(dataList)):
-                    headway = []
-                    headway.append(float(0))
-                    for o in range(len(dataList) - 1):
-                        headway.append((float(dataList[o]) - float(dataList[o+1])))
-                    xp = 1000 - p*headway[p] 
-                    carRect.center = (xp, start_y)
-                    gameDisplay.blit(carImg, carRect)
-                    pygame.display.update()
-                    
-                    
-            for j in range(len(tree)):
-                if tree[j] < 0:
-                    tree[j] = 1600
+        for j in range(len(tree)):
+            if tree[j] < 0:
+                tree[j] = 1600
+        
+        for i in range(len(tree)):
+            tree[i] -= treeSpeed
             
+        if prev < d:
+            for i in range(len(dataList)):
+                carRect.center = (float(dataList[i]), start_y)
+                gameDisplay.blit(carImg, carRect)
+            pygame.display.update()
+        else:
+            for p in range(len(dataList)):
+                headway = []
+                headway.append(float(0))
+                for o in range(len(dataList) - 1):
+                    headway.append((float(dataList[o]) - float(dataList[o+1])))
+#                print(headway)
+                xp = []
+#                xp.append(0)
+                f = 0
+                for o in range(len(dataList)):
+                    f += headway[o]
+                    xp.append(f)
+#                print(xp)
+#                xp = 1000 - p*headway[p] 
+                carRect.center = (1000 - xp[p], start_y)
+                gameDisplay.blit(carImg, carRect)
+            pygame.display.update()
 
-        with lock:
+#        with lock:
 #            print([float(dataList[0]) - float(dataList[1]), float(dataList[1]) - float(dataList[2])])
-            print("POSITIONS RECEIVED: {}".format([float(value) for key, value in dataList.items()]))
+#            print("POSITIONS RECEIVED: {}".format([float(value) for key, value in dataList.items()]))
+#            print([float(dataList[i]) - float(dataList[i+1]) for i in range(lesleepTimen(dataList) - 1)])
             
         pygame.display.flip()
         clock.tick(120)
@@ -227,18 +235,21 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
 
 def receivePos(client_sock,key, BUFSIZE = 8196):
     global lock, dataList, prev, speed
+    localList = {}
     while True:
         lock.acquire()
         jsonPosList = client_sock.recv(BUFSIZE).decode("utf-8")
+        print(jsonPosList)
         speedPosList = json.loads(jsonPosList)
-#        print(speedPosList['0'])
-#        print(speedPosList['1'])
-        dataList[key-1] = float(speedPosList['0'])
-        speed[key-1] = float(speedPosList['1'])
+        for i, j in speedPosList.items():
+            localList[i] = float(j)
+        dataList[key-1] = localList['0']
+        speed[key-1] = localList['1']
 #        print("Client {} : {}, {}".format(key, dataList[key-1], speed[key-1]))
         prev = float(dataList[0])
         lock.release()
-        time.sleep(0.01)
+        time.sleep(0.005)
+        
 
 def draw_background(gameDisplay, display_width, black, green, tree, y1, y2):
     road_1 = (120, 120, 120)
@@ -281,7 +292,7 @@ def draw_background(gameDisplay, display_width, black, green, tree, y1, y2):
     pygame.draw.rect(gameDisplay, road_2, (0, 580, display_width, 10), 0)
     pygame.draw.rect(gameDisplay, road_1, (0, 590, display_width, 10), 0)
     
-    pygame.draw.rect(gameDisplay, ground_6, (0, 0, display_width, 50), 0)
+    pygame.draw.rect(gameDisplay, black, (0, 0, display_width, 50), 0)
     pygame.draw.rect(gameDisplay, ground_5, (0, 50, display_width, 50), 0)
     pygame.draw.rect(gameDisplay, ground_4, (0, 100, display_width, 50), 0)
     pygame.draw.rect(gameDisplay, ground_3, (0, 150, display_width, 50), 0)
@@ -293,7 +304,7 @@ def draw_background(gameDisplay, display_width, black, green, tree, y1, y2):
     pygame.draw.rect(gameDisplay, ground_3, (0, 800, display_width, 50), 0)
     pygame.draw.rect(gameDisplay, ground_4, (0, 850, display_width, 50), 0)
     pygame.draw.rect(gameDisplay, ground_5, (0, 900, display_width, 50), 0)
-    pygame.draw.rect(gameDisplay, ground_6, (0, 950, display_width, 50), 0)
+    pygame.draw.rect(gameDisplay, black, (0, 950, display_width, 50), 0)
         
     pygame.draw.line(gameDisplay,black, (0,400),(display_width,400), 4)
     pygame.draw.line(gameDisplay,black, (0,600),(display_width,600), 4)

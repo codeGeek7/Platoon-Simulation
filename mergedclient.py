@@ -6,7 +6,7 @@ Created on Wed Mar  6 17:06:22 2019
 @author: vra24
 """
 
-import socket, sys, traceback, json, time, os, termios, tty, struct
+import socket, sys, traceback, json, time, os, termios, tty, struct, random
 from threading import Thread, Lock
 lock = Lock()
 listReceived = False
@@ -14,9 +14,9 @@ endgame = False
 clientList = {}
 mypos = 0
 myspeed = 0
-maxspeed = 2
+maxspeed = 0.5
 frontpos = -1
-maxheadway = 155
+maxheadway = 151
 minheadway = 150
 display_width = 1600
 numClients = 0
@@ -25,26 +25,31 @@ sleepTime = 0
 #-----------------------------------------------------------------------------
 def initialize():
     sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = socket.gethostname()
+#    host = socket.gethostname()
+    host = socket.gethostbyname('euclid')
     port = 6789
     os.system('clear')
     try:
+        print("SYSTEM: Attempting to connect to server.")
         sockfd.connect((host, port))
-    except:
-        print("Connection error")
+    except sockfd.timeout:
+        print("Connection error: timeout {}")
         sys.exit()
+        sockfd.close()
     
+    print("SYSTEM: Connection with the server was successful.")
     myID = requestMyID(sockfd, 0)
     if int(myID) == 1:
         # detect for 'S' input on keyboard, If detected then request server to send list
         detect_key_press(sockfd)
     receive_list(sockfd)
     connect_to_peers(myID, port, sockfd)
+    sockfd.close()
         
 #-----------------------------------------------------------------------------
 def requestMyID(sockfd, reqOpt, BUFSIZE = 4096):
-    print("Attempting to connect to server...")
     try:
+        print("SYSTEM: Attempting to receive my position in platoon.")
         sockfd.sendall(str(reqOpt).encode("utf-8"))
     except:
         print("Could not request server for 'myID'")
@@ -52,8 +57,7 @@ def requestMyID(sockfd, reqOpt, BUFSIZE = 4096):
         
     try:
         myID = sockfd.recv(BUFSIZE).decode("utf-8")
-        print("SYSTEM: CONNECTION WITH SERVER HAS BEEN ESTABLISHED.")
-        print("My ID is : " + myID)
+        print("SYSTEM: My position (ID) is : " + myID)
         return myID
     except:
         print("Could not receive my ID from server")
@@ -61,12 +65,14 @@ def requestMyID(sockfd, reqOpt, BUFSIZE = 4096):
         
 #-----------------------------------------------------------------------------
 def detect_key_press(sockfd):
-    button_delay = 0.2
-    print("Press c/C to continue accepting client and s/S to stop accepting clients")
+    button_delay = 0.02
+    print("******************************************************************************************")
+    print("NOTE TO USER: Press c/C to continue accepting client and s/S to stop accepting clients")
+    print("******************************************************************************************")
     while True:
         key = getch()
         if key == "s" or key == "S":
-            print("Requesting server to send client list to all clients")
+            print("SYSTEM: Requesting server to send client list to all clients")
             try:
                 sockfd.send('s'.encode("utf-8"))
             except:
@@ -74,7 +80,7 @@ def detect_key_press(sockfd):
                 sys.exit()
             break
         elif key == "c" or key == "C":
-            print("Receiving more client..")
+            print("SYSTEM: Accepting more client to the platoon.")
             try:
                 sockfd.send('c'.encode("utf-8"))
             except:
@@ -101,7 +107,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
     
     # receive initial location from server
     try:
-        print("Requesting server for 'start position'")
+        print("SYSTEM: Requesting server for 'start position'")
         sockfd.sendall("xpos".encode("utf-8"))
     except:
         print("Could not request server for 'start position'")
@@ -109,7 +115,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
         
     try:
         start_x = sockfd.recv(BUFSIZE).decode("utf-8")
-        print("My start position is : " + start_x)
+        print("SYSTEM: My start position is : " + start_x)
         mypos = int(start_x)
     except:
         print("Could not receive my start position")
@@ -117,7 +123,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
 
     carinfront = False
     caronback = False
-    print("Attempting to connect to other peers...")
+    print("SYSTEM: Attempting to connect to other peers (neighbour cars).")
     # CONNECT TO THE CAR BEHIND ME, HAS ID = myID + 1
     behindID = str(int(myID) + 1)
     if behindID in clientList.keys():
@@ -125,7 +131,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
         mySock1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         myHost, myPort = clientList[myID]
         myPort = port + int(myID)
-        print("Attempting to binding to server with ID: " + behindID)
+#        print("Adeceleratettempting to binding to server with ID: " + behindID)
         try:
             mySock1.bind((myHost, myPort))
             caronback = True
@@ -133,7 +139,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
             print("Bind failed. Error : " + str(sys.exc_info()))
         mySock1.listen(1)
         behindSock, behindAddr = mySock1.accept()
-        print("Connected with " + str(behindAddr[0]) + " : " + str(behindAddr[1]))
+#        print("Connected with " + str(behindAddr[0]) + " : " + str(behindAddr[1]))
         
     # CONNECT TO THE CAR IN FRONT OF ME, HAS ID = myID - 1
     frontID = str(int(myID) - 1)
@@ -141,7 +147,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
         mySock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         frontHost, frontPort = clientList[frontID]
         frontPort = port + int(frontID)
-        print("Connecting to server with id " + frontID)
+#        print("Connecting to server with id " + frontID)
         connected = False
         while not connected:
             try:
@@ -150,7 +156,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
                 connected = True
             except:
                 pass
-    
+    print("SYSTEM: Connection with peers is successful.")
     BUF = 20
     socklist = []
     if carinfront:
@@ -162,7 +168,8 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
     if carinfront:
         # construct bidirectional communication on user input [ACCEPT USR INPUT && SEND TO FRONT CAR]
         try:
-            Thread(target=usrinput, args=(mySock2, socklist, BUF)).start()
+            t1 = Thread(target=usrinput, name = "thread_1", args=(mySock2, socklist, BUF))
+            t1.start()
         except:
             print("Thread didn't start")
             traceback.print_exc()
@@ -170,14 +177,16 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
     
         # continously update front car position [RECV FROM FRONT CAR]
         try:
-            Thread(target=updatefpos, args=(mySock2, socklist, BUF)).start()   
+            t2 = Thread(target=updatefpos, name = "thread_2", args=(mySock2, socklist, BUF))
+            t2.start()
         except:
             print("Thread didn't start")
             traceback.print_exc()
     else:
         # accept user input [ACCEPT USR INPUT]
         try:
-            Thread(target=usrinput, args=(behindSock, socklist, BUF)).start()
+            t3 = Thread(target=usrinput, name = "thread_3", args=(behindSock, socklist, BUF))
+            t3.start()
         except:
             print("Thread didn't start")
             traceback.print_exc()
@@ -186,14 +195,16 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
     if caronback:
         # [SEND TO BACK CAR]
         try:
-            Thread(target=sendbpos, args=(behindSock, BUF)).start()
+            t4 = Thread(target=sendbpos, name = "thraed_4", args=(behindSock, BUF))
+            t4.start()
         except:
             print("Thread didn't start")
             traceback.print_exc()
         
         # [RECV FROM BACK CAR]
         try:
-            Thread(target=detectbevent, args=(behindSock, socklist, 1)).start()
+            t5 = Thread(target=detectbevent, name = "thread_5", args=(behindSock, socklist, 1))
+            t5.start()
         except:
             print("Thread didn't start")
             traceback.print_exc()
@@ -206,7 +217,8 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
                 sleepTime = 0.4
             elif 7 <= numClients < 11:
                 sleepTime = 0.6
-        Thread(target=sendserver, args=(sockfd, BUF)).start()
+        t6 = Thread(target=sendserver, name = "thread_6", args=(sockfd, BUF))
+        t6.start()
     except:
         print("Thread didn't start")
         traceback.print_exc()
@@ -218,11 +230,13 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
             continue
         elif headway == 1:
 #            print("ACCELERATING from main")
-            accelerate(0.05)
+#            num = random.random()*10
+#            for i in range(int(num)):
+            accelerate1(headway, 0.1)
         elif headway == -1:      
 #            print("DECELERATING from main")
             decelerate()
-        
+#            accelerate(0.01)
         # stop convoy if there was a crash 
         if headway == -10:
             print("CRASH!!!!")
@@ -235,6 +249,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
 #    broadcast(socklist, "Q")
     
     sys.exit()
+    sockfd.close()
 
 #=============================================================================
 # SEND SERVER
@@ -246,7 +261,6 @@ def sendserver(sock, BUF):
             sendlist = {}
             sendlist[0] = mypos
             sendlist[1] = myspeed
-#            sendlist = [mypos, myspeed]
             msg = json.dumps(sendlist)
             sock.sendall(str(msg).encode("utf-8"))
             time.sleep(sleepTime)
@@ -264,10 +278,12 @@ def detectbevent(sock, socklist, BUF):
             msg = sock.recv(BUF).decode("utf-8")
             if msg == "A":
                 print("ACC from back car")
+#                time.sleep(0.001)
                 accelerate(0.1)
             elif msg == "D":
                 print("DCC from back car")
                 decelerate()
+#                time.sleep(0.001)
             elif msg == "S":
                 print("STOP from back car")
                 for sockelem in socklist:
@@ -285,6 +301,7 @@ def detectbevent(sock, socklist, BUF):
                 pass
         except:
             pass
+    sys.exit()
 
 #-----------------------------------------------------------------------------
 # SEND TO BACK
@@ -298,7 +315,7 @@ def sendbpos(sock, BUF):
         except:
             traceback.print_exc()
             sys.exit()
-        time.sleep(0.05)
+        time.sleep(0.01)
 
 #-----------------------------------------------------------------------------
 # RECEIVE FROM FRONT 
@@ -352,7 +369,7 @@ def getch():
 # NOTE: lead car has frontpos = -1, never returning headway of -1
 def usrinput(sock, socklist, BUF):
     global endgame, myspeed, frontpos, mypos
-    button_delay = 0.1
+    button_delay = 0.05
     while True:
         key = getch()
         # accelerate
@@ -369,6 +386,7 @@ def usrinput(sock, socklist, BUF):
             elif headway == 1:
                 print("HEADWAY TOO BIG")
             accelerate(0.1)
+#            time.sleep(0.1)
             time.sleep(button_delay)
         # decelerate
         elif (key == "a"):
@@ -402,7 +420,7 @@ def usrinput(sock, socklist, BUF):
             time.sleep(button_delay)
         # quit NEEDS MODIFICATION! LET ALL OTHERS KNOW TO QUIT
         elif (key == "q"):
-            print("Ending game...")
+            print("SYSTEM: Ending simulation.")
 #            lock.acquire()
             endgame = True
 #            lock.release()
@@ -421,6 +439,16 @@ def accelerate(acc_change):
     if myspeed < maxspeed:
         myspeed += acc_change
     lock.release()
+    
+#-----------------------------------------------------------------------------
+def accelerate1( headway, acc_change):
+    global maxheadway
+    global myspeed, maxspeed
+    lock.acquire()
+#    print("ACCEL")
+    if headway < maxheadway:
+        myspeed += acc_change
+    lock.release()
 
 #-----------------------------------------------------------------------------
 def decelerate():
@@ -428,7 +456,7 @@ def decelerate():
     lock.acquire()
 #    print("DECEL")
     if myspeed > 0:
-        myspeed -= 0.1
+        myspeed -= 0.2
     else:
         myspeed = 0
     lock.release()
@@ -445,7 +473,7 @@ def setpos():
     lock.acquire()
     if myspeed < 0:
         myspeed = 0
-    mypos = (mypos + (myspeed * (1/100000)))
+    mypos = (mypos + (myspeed * (random.random()/50000)))
     lock.release()
     # THIS NEEDS TO BE FIXED SO THAT UPDATED POSITION IS WITHIN THE WINDOW
 
