@@ -26,7 +26,8 @@ sleepTime = 0
 def initialize():
     sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #    host = socket.gethostname()
-    host = socket.gethostbyname('euclid')
+#    os.environ['']
+    host = socket.gethostbyname('dahl')
     port = 6789
     os.system('clear')
     try:
