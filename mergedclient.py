@@ -14,7 +14,7 @@ endgame = False
 clientList = {}
 mypos = 0
 myspeed = 0
-maxspeed = 0.5
+maxspeed = 1.0
 frontpos = -1
 maxheadway = 151
 minheadway = 150
@@ -27,7 +27,7 @@ def initialize():
     sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #    host = socket.gethostname()
 #    os.environ['']
-    host = socket.gethostbyname('dahl')
+    host = socket.gethostbyname('babbage')
     port = 6789
     os.system('clear')
     try:
@@ -264,8 +264,8 @@ def sendserver(sock, BUF):
             sendlist[1] = myspeed
             msg = json.dumps(sendlist)
             sock.sendall(str(msg).encode("utf-8"))
-            time.sleep(sleepTime)
-#            sock.send(str(mypos).encode("utf-8"))
+#            time.sleep(sleepTime)
+            ack = sock.recv(BUF).decode("utf-8")
         except:
             traceback.print_exc()
             sys.exit()
@@ -316,7 +316,7 @@ def sendbpos(sock, BUF):
         except:
             traceback.print_exc()
             sys.exit()
-        time.sleep(0.01)
+        time.sleep(0.001)
 
 #-----------------------------------------------------------------------------
 # RECEIVE FROM FRONT 
@@ -370,16 +370,13 @@ def getch():
 # NOTE: lead car has frontpos = -1, never returning headway of -1
 def usrinput(sock, socklist, BUF):
     global endgame, myspeed, frontpos, mypos
-    button_delay = 0.05
+    button_delay = 0.001
     while True:
         key = getch()
         # accelerate
         if (key == "d"):
             print("Accelerating..")
             headway = getheadway()
-            print("Front pos: ", frontpos)
-            print("My pos: ", mypos)
-            print("Myspeed: ", myspeed)
             # if headway is too small let car in front knows
             if headway == -1:
                 print("HEADWAY TOO SMALL")
@@ -387,15 +384,15 @@ def usrinput(sock, socklist, BUF):
             elif headway == 1:
                 print("HEADWAY TOO BIG")
             accelerate(0.1)
+            print("Front pos: ", frontpos)
+            print("My pos: ", mypos)
+            print("Myspeed: ", myspeed)
 #            time.sleep(0.1)
             time.sleep(button_delay)
         # decelerate
         elif (key == "a"):
             print("Decelerating...")
             headway = getheadway()
-            print("Front pos: ", frontpos)
-            print("My pos: ", mypos)
-            print("Myspeed: ", myspeed)
             if headway == 1:
                 print("HEADWAY TOO BIG")
                 sock.send("D".encode("utf-8"))
@@ -403,15 +400,18 @@ def usrinput(sock, socklist, BUF):
                 print("HEADWAY TOO SMALL")
             decelerate()
             time.sleep(button_delay)
+            print("Front pos: ", frontpos)
+            print("My pos: ", mypos)
+            print("Myspeed: ", myspeed)
         # stop
         elif (key == "s"):
             print("Stopping...")
+            broadcast(socklist, "S")
+            stop()
             print("Front pos: ", frontpos)
             print("My pos: ", mypos)
             print("Myspeed: ", myspeed)
             headway = getheadway()
-            broadcast(socklist, "S")
-            stop()
 #            while (myspeed > 0):
 #                headway = getheadway()
 #                if headway == 1:
