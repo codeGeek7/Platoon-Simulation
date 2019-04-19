@@ -67,7 +67,7 @@ def server_connect():
             add_client_to_list(clientConn, clientID, clientAdd)
             clientIP = str(clientAdd[0])
             clientPort = str(clientAdd[1])
-            print("SYSTEM: Connection received from CLIENT " + str(clientID) + "with address " + clientIP + ":" + clientPort)
+            print("SYSTEM: Connection received from CLIENT " + str(clientID) + " with address " + clientIP + ":" + clientPort)
             recvOpt = clientConn.recv(1).decode("utf-8")
             if recvOpt == "0":
                 send_client_ID(clientConn, clientID)
@@ -164,7 +164,7 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
     threadList = []
     threadName = "receive position thread "
     for key, value in clientSockList.items():
-        threadList.append(Thread(target = receivePos, name = threadName + str(key),args = (value,key)))
+        threadList.append(Thread(target = receivePos, name = threadName + str(key),args = (value,key), daemon = True))
         dataList[key-1] = ""
     for i in range(len(clientList)):
         threadList[i].start()
@@ -172,9 +172,8 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
 #    time.sleep(0.5)
     
     while True:
-        with lock:
-            if simulationExit == True:
-                break
+        if simulationExit == True:
+            break
         for event in pygame.event.get():
             if event.type == pygame.K_ESCAPE:
                 pygame.quit()
@@ -277,22 +276,40 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
         
 
 def receivePos(client_sock,key, BUFSIZE = 8196):
-    global lock, dataList, prev, speed
+    global lock, dataList, prev, speed, simulationExit
     localList = {}
     while True:
         lock.acquire()
         jsonPosList = client_sock.recv(BUFSIZE).decode("utf-8")
 #        print(jsonPosList)
-        speedPosList = json.loads(jsonPosList)
-        for i, j in speedPosList.items():
-            localList[i] = float(j)
-        dataList[key-1] = localList['0']
-        speed[key-1] = localList['1']
-#        print("Client {} : {}, {}".format(key, dataList[key-1], speed[key-1]))
-        prev = float(dataList[0])
-        client_sock.send("ACK".encode("utf-8"))
-        lock.release()
-        time.sleep(0.001)
+        if jsonPosList:
+            try:
+                speedPosList = json.loads(jsonPosList)
+            except:
+                with lock:
+                    simulationExit = True
+                sys.exit()
+            for i, j in speedPosList.items():
+                localList[i] = float(j)
+            dataList[key-1] = localList['0']
+            speed[key-1] = localList['1']
+    #        print("Client {} : {}, {}".format(key, dataList[key-1], speed[key-1]))
+            prev = float(dataList[0])
+            try:
+                client_sock.send("ACK".encode("utf-8"))
+            except:
+                sys.exit()
+                client_sock.close()
+            lock.release()
+            if dataList[key-1] < 0 and speed[key-1] < 0:
+                with lock:
+                    simulationExit = True
+                break
+            time.sleep(0.001)
+        else:
+#            print(jsonPosList)
+            with lock:
+                simulationExit = True
         
 
 def calcTreeSpeed(speed):
