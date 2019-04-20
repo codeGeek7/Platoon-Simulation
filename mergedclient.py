@@ -26,7 +26,7 @@ minheadway = 150        # MIN HEADWAY
 #-----------------------------------------------------------------------------
 def initialize():
     sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = socket.gethostname()
+    host = socket.gethostbyname('cray')
     port = 6789
     os.system('clear')
     
@@ -479,8 +479,7 @@ def updatefpos(caronback, tmpfsock, tmpbsock):
                 data += msg
             # IF FRONT CAR NEEDS ME TO STOP
             if data == "\"S\"":
-                print("SYSTEM: Stop from front car")
-                print("SYSTEM: Please wait 3 seconds before pressing q/Q to quit")
+                print("SYSTEM: Stop from front car\nSYSTEM: Please wait 3 seconds before pressing q/Q to quit")
                 # IF THERE IS CAR ON BACK, TELL IT TO STOP
                 if caronback:
                     try:

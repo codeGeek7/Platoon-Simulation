@@ -109,13 +109,10 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
 #    time.sleep(1)
     global dataList, lock, prev, speed, simulationExit
     print("\nSYSTEM: STARTING THE PLATOON SIMULATION.")
-
-    display_width = 1600
-    display_height = 1000
+    
     start_x = list(range(1,len(clientList)+1))
     start_x = [item*150 - 50 for item in start_x]
     start_x.reverse()
-    start_y = display_height/2
     
     # Send initial positions to all clients
     for key, value in clientSockList.items():
@@ -133,6 +130,13 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
     pygame.init()
     pygame.font.init()
     
+    infoObject = pygame.display.Info()
+    
+    display_width = infoObject.current_w
+    display_height = infoObject.current_h
+    
+    start_y = display_height/2
+    
     white = (255, 255, 255)
     black = (0,0,0)
     font = pygame.font.SysFont('courier new', 16)
@@ -140,22 +144,23 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
     carImg = pygame.image.load('car2.png')
     carImg = pygame.transform.scale(carImg, (100,50))
     carRect = carImg.get_rect()
-
-    gameDisplay = pygame.display.set_mode((display_width, display_height))
+    
+    print(infoObject.current_w, infoObject.current_h)
+    gameDisplay = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
     pygame.display.set_caption('P2P based Platton Simulator')
     gameDisplay.fill(white)
     clock = pygame.time.Clock()
     
     
     
-    treeSep = 200
-    tree = [treeSep*(i+1) for i in range(1600//treeSep)]
-    bushSep = 200
-    bush = [bushSep*(i+1) - 100 for i in range(1600//treeSep)]
+    treeSep = 240
+    tree = [treeSep*(i+1) for i in range(display_width//treeSep)]
+    bushSep = 240
+    bush = [bushSep*(i+1) - 100 for i in range(display_width//treeSep)]
     treeSpeed = 0
-    y1 = 350
-    y2 = 650
-    d = 1000
+    y1 = 450
+    y2 = 750
+    d = display_width*7/10
     limit = list(range(1,11))
     limit = [float(i*d) for i in limit]
 
@@ -179,7 +184,7 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
                 pygame.quit()
                 quit()
                 
-        draw_background(gameDisplay, display_width, black, tree, bush, y1, y2)
+        draw_background(gameDisplay, display_width, display_height, black, tree, bush, y1, y2)
         
 
         if startOfGame == True:
@@ -199,11 +204,11 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
         
         for j in range(len(tree)):
             if tree[j] + 13 < 0:
-                tree[j] = 1600
+                tree[j] = display_width
         
         for j in range(len(bush)):
             if bush[j] + 5 < 0:
-                bush[j] = 1600
+                bush[j] = display_width
         
         for i in range(len(tree)):
             tree[i] -= treeSpeed
@@ -229,7 +234,7 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
                     xp.append(f)
 #                print(xp)
 #                xp = 1000 - p*headway[p] 
-                carRect.center = (1000 - xp[p], start_y)
+                carRect.center = (d - xp[p], start_y)
                 gameDisplay.blit(carImg, carRect)
 #            pygame.display.update()
             
@@ -266,7 +271,7 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
         gameDisplay.blit(textSurf_speed, textRect_speed)
 #        pygame.display.update()
         time.sleep(0.001)
-#        print("POSITIONS RECEIVED: {}".format([float(value) for key, value in dataList.items()]))
+        print("POSITIONS RECEIVED: {}".format([float(value) for key, value in dataList.items()]))
 #        print("SPEEDS RECEIVED: {}".format([float(value) for key, value in speed.items()]))
 #            print([float(dataList[i]) - float(dataList[i+1]) for i in range(lesleepTimen(dataList) - 1)])
             
@@ -347,7 +352,7 @@ def calcTreeSpeed(speed):
 #    elif 0.7 <=- float(speed[0]) < 1.5:
 #        treeSpeed = 20
         
-def draw_background(gameDisplay, display_width, black, tree, bush, y1, y2):
+def draw_background(gameDisplay, display_width, display_height, black, tree, bush, y1, y2):
     road_1 = (120, 120, 120)
     road_2 = (128, 128, 128)    
     road_3 = (136, 136, 136)
@@ -369,43 +374,42 @@ def draw_background(gameDisplay, display_width, black, tree, bush, y1, y2):
 #    ground_5 = (0, 243, 0)
     
     
-    pygame.draw.rect(gameDisplay, road_1, (0, 400, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_2, (0, 410, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_3, (0, 420, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_4, (0, 430, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_5, (0, 440, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_6, (0, 450, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_7, (0, 460, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_8, (0, 470, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_9, (0, 480, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_10, (0, 490, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_10, (0, 500, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_9, (0, 510, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_8, (0, 520, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_7, (0, 530, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_6, (0, 540, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_5, (0, 550, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_4, (0, 560, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_3, (0, 570, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_2, (0, 580, display_width, 10), 0)
-    pygame.draw.rect(gameDisplay, road_1, (0, 590, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_1, (0, display_height/2 - 100, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_2, (0, display_height/2 - 90, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_3, (0, display_height/2 - 80, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_4, (0, display_height/2 - 70, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_5, (0, display_height/2 - 60, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_6, (0, display_height/2 - 50, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_7, (0, display_height/2 - 40, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_8, (0, display_height/2 - 30, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_9, (0, display_height/2 - 20, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_10, (0, display_height/2 - 10, display_width, 10), 0)
     
-    pygame.draw.rect(gameDisplay, black, (0, 0, display_width, 50), 0)
-    pygame.draw.rect(gameDisplay, black, (0, 50, display_width, 50), 0)
-    pygame.draw.rect(gameDisplay, black, (0, 100, display_width, 50), 0)
-    pygame.draw.rect(gameDisplay, black, (0, 150, display_width, 50), 0)
-    pygame.draw.rect(gameDisplay, ground_2, (0, 200, display_width, 100), 0)
-    pygame.draw.rect(gameDisplay, ground_1, (0, 300, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, road_10, (0, display_height/2, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_9, (0, display_height/2 + 10, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_8, (0, display_height/2 + 20, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_7, (0, display_height/2 + 30, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_6, (0, display_height/2 + 40, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_5, (0, display_height/2 + 50, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_4, (0, display_height/2 + 60, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_3, (0, display_height/2 + 70, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_2, (0, display_height/2 + 80, display_width, 10), 0)
+    pygame.draw.rect(gameDisplay, road_1, (0, display_height/2 + 90, display_width, 10), 0)
     
-    pygame.draw.rect(gameDisplay, ground_1, (0, 600, display_width, 100), 0)
-    pygame.draw.rect(gameDisplay, ground_2, (0, 700, display_width, 100), 0)
-    pygame.draw.rect(gameDisplay, black, (0, 800, display_width, 50), 0)
-    pygame.draw.rect(gameDisplay, black, (0, 850, display_width, 50), 0)
-    pygame.draw.rect(gameDisplay, black, (0, 900, display_width, 50), 0)
-    pygame.draw.rect(gameDisplay, black, (0, 950, display_width, 50), 0)
+    pygame.draw.rect(gameDisplay, black, (0, display_height/2 - 600, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, black, (0, display_height/2 - 500, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, black, (0, display_height/2 - 400, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, ground_2, (0, display_height/2 - 300, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, ground_1, (0, display_height/2 - 200, display_width, 100), 0)
+#    
+    pygame.draw.rect(gameDisplay, ground_1, (0, display_height/2 + 100, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, ground_2, (0, display_height/2 + 200, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, black, (0, display_height/2 + 300, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, black, (0, display_height/2 + 400, display_width, 100), 0)
+    pygame.draw.rect(gameDisplay, black, (0, display_height/2 + 500, display_width, 100), 0)
         
-    pygame.draw.line(gameDisplay,black, (0,400),(display_width,400), 4)
-    pygame.draw.line(gameDisplay,black, (0,600),(display_width,600), 4)
+    pygame.draw.line(gameDisplay,black, (0,display_height/2 - 100),(display_width,display_height/2 - 100), 4)
+    pygame.draw.line(gameDisplay,black, (0,display_height/2 + 100),(display_width,display_height/2 + 100), 4)
     
     for j in range(len(tree)):
         pygame.draw.circle(gameDisplay, green, (tree[j],y1), 25, 0)
