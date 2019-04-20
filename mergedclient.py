@@ -91,7 +91,7 @@ def getch():
 # LEADCAR RECEIVING USER-PRESSED KEYBORAD INPUT FROM PROMPT
 #-----------------------------------------------------------------------------
 def detect_key_press(sockfd):
-    button_delay = 0.002
+    button_delay = 0.0001
     print("******************************************************************************************")
     print("NOTE TO USER: Press c/C to continue accepting client and s/S to stop accepting clients")
     print("******************************************************************************************")
@@ -457,7 +457,7 @@ def sendbpos(sock):
         except:
             traceback.print_exc()
             sys.exit()
-        time.sleep(0.001)
+        time.sleep(0.0000001)
 
 #-----------------------------------------------------------------------------
 # RECEIVE FROM FRONT 
@@ -519,7 +519,7 @@ def updatefpos(caronback, tmpfsock, tmpbsock):
 #-----------------------------------------------------------------------------
 def usrinput(carinfront, caronback, tmpfsock, tmpbsock):
     global endgame, myspeed, frontpos, mypos, lock, myspeed, maxspeed
-    button_delay = 0.002
+    button_delay = 0.0001
     while True:
         # IF SIMULATION ENDED, BREAK
         if endgame:
