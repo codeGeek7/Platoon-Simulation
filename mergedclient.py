@@ -92,7 +92,7 @@ def getch():
 # LEADCAR RECEIVING USER-PRESSED KEYBORAD INPUT FROM PROMPT
 #-----------------------------------------------------------------------------
 def detect_key_press(sockfd):
-    button_delay = 0.5
+    button_delay = 0.001
     print("******************************************************************************************")
     print("NOTE TO USER: Press c/C to continue accepting client and s/S to stop accepting clients")
     print("******************************************************************************************")
@@ -285,7 +285,7 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
         
         # IF HEADWAY IS TOO BIG, ACCELERATE
         if headway == 1:
-            accelerateH(headway, 0.1)
+            accelerateH(headway, 0.05)#0.1)
         # IF HEADWAY IS TOO SMALL, DECELERATE
         elif headway == -1:      
             decelerate()
@@ -521,7 +521,7 @@ def updatefpos(caronback, tmpfsock, tmpbsock):
 #-----------------------------------------------------------------------------
 def usrinput(carinfront, caronback, tmpfsock, tmpbsock):
     global endgame, myspeed, frontpos, mypos, lock, myspeed, maxspeed
-    button_delay = 0.5
+    button_delay = 0.0001
     while True:
         # IF SIMULATION ENDED, BREAK
         if endgame:
@@ -531,7 +531,7 @@ def usrinput(carinfront, caronback, tmpfsock, tmpbsock):
         key = getch()
         # IF KEY WAS 'd/D', ACCELERATE
         if (key == 'd' or key == 'D'):
-            fprint("SYSTEM: Accelerating..")
+#            fprint("SYSTEM: Accelerating..")
             accelerate(0.1)
             # IF THERE IS A CAR IN FRONT AND HEADWAY IS TOO SMALL, TELL FRONT CAR TO ACCELERATE
             headway = getheadway()
@@ -542,7 +542,7 @@ def usrinput(carinfront, caronback, tmpfsock, tmpbsock):
                     
         # IF KEY WAS 'a/A', DECELERATE
         elif (key == 'a' or key == 'A'):
-            fprint("SYSTEM: Decelerating...")
+#            fprint("SYSTEM: Decelerating...")
             decelerate()
             # IF THERE IS CAR IN FRONT AND HEADWAY IS TOO BIG, TELL FRONT CAR TO DECELERATE
             headway = getheadway()

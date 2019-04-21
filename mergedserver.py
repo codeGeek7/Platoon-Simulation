@@ -283,7 +283,7 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
             speedFile.write("%f "%float(value))
         speedFile.write("\n")
         
-        for item in headway.enumerate():
+        for item in headway:
             headwayFile.write("%f "%float(item))
         headwayFile.write("\n")
         
