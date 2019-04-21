@@ -25,6 +25,7 @@ minheadway = 150        # MIN HEADWAY
 # MAIN
 #-----------------------------------------------------------------------------
 def initialize():
+    # INITIALIZE SOCKET FOR SERVER
     sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     host = socket.gethostbyname('cray')
     port = 6789
@@ -56,7 +57,7 @@ def initialize():
 # REQUESTING MY ID TO SERVER     
 #-----------------------------------------------------------------------------
 def requestMyID(sockfd, reqOpt, BUFSIZE = 4096):
-    # SENDING REQUEST 
+    # SENDING REQUEST FOR MYID
     try:
         sockfd.sendall(str(reqOpt).encode("utf-8"))
     except:
@@ -91,7 +92,7 @@ def getch():
 # LEADCAR RECEIVING USER-PRESSED KEYBORAD INPUT FROM PROMPT
 #-----------------------------------------------------------------------------
 def detect_key_press(sockfd):
-    button_delay = 0.0001
+    button_delay = 0.5
     print("******************************************************************************************")
     print("NOTE TO USER: Press c/C to continue accepting client and s/S to stop accepting clients")
     print("******************************************************************************************")
@@ -337,6 +338,23 @@ def connect_to_peers(myID, port, sockfd, BUFSIZE = 4096):
     sys.exit()
 
 #-----------------------------------------------------------------------------
+# PRINT FUNCTION
+#-----------------------------------------------------------------------------
+def fprint(text):
+    print(text)
+    
+#-----------------------------------------------------------------------------
+# SEND SOCKET
+#-----------------------------------------------------------------------------
+def sendsock(sock, msg, exception):
+    # WRAP MESSAGE IN FORMAT OF (LENGTH OF MESSAGE, MESSAGE)
+    try:
+        message = json.dumps(msg)
+        sock.send(struct.pack("i", len(message))+message.encode("utf-8"))
+    except:
+        print(exception)
+
+#-----------------------------------------------------------------------------
 # SEND TO SERVER
 #-----------------------------------------------------------------------------
 def sendserver(sock, BUF=1024):
@@ -356,7 +374,7 @@ def sendserver(sock, BUF=1024):
             # ACKNOWLEDGEMENT FROM SERVER
             ack = sock.recv(BUF).decode("utf-8")
             if not ack:
-                print("SYSTEM: Acknowledgement from server not received")
+                fprint("SYSTEM: Acknowledgement from server not received")
         except:
             traceback.print_exc()
             sys.exit()
@@ -370,6 +388,7 @@ def detectbevent(carinfront, tmpbsock, tmpfsock):
         # IF SIMULATION ENDED, BREAK
         if endgame:
             break
+        
         # RECEIVE EVENT FROM BACK
         try:
             size = struct.unpack("i", tmpbsock.recv(struct.calcsize("i")))[0]
@@ -379,60 +398,45 @@ def detectbevent(carinfront, tmpbsock, tmpfsock):
                 if not msg:
                     break
                 data += msg
+                
             # IF BACK CAR NEEDS ME TO ACCELERATE 
             if data == "\"A\"":
-                print("\nSYSTEM: Acceleration from back car")
-                 
+                fprint("SYSTEM: Acceleration from back car")
                 # IF THERE IS CAR IN FRONT OF ME, PROPAGATE MESSAGE
                 if carinfront:
-                    print("SYSTEM: Send front car to accelerate")
-                     
-                    message = json.dumps("A")
-                    tmpfsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
+                    fprint("SYSTEM: Send front car to accelerate")
+                    exc = "Send front car  accelerate from detectbevent failed"
+                    sendsock(tmpfsock, "A", exc)
                 accelerate(0.1)
+                
             # IF BACK CAR NEEDS ME TO DECELERATE
             elif data == "\"D\"":
-                print("SYSTEM: Deceleration from back car")
-                 
+                fprint("SYSTEM: Deceleration from back car")
                 # IF THERE IS A CAR IN FRONT OF ME, PROPAGATE MESSAGE
                 if carinfront:
-                    print("SYSTEM: Send front car to decelerate")
-                     
-                    message = json.dumps("D")
-                    tmpfsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
+                    fprint("SYSTEM: Send front car to decelerate")
+                    exc = "Send front car decelerate from detectbevent failed"
+                    sendsock(tmpfsock, "D", exc)
                 decelerate()
+                
             # IF BACK CAR NEEDS ME TO STOP
             elif data == "\"S\"":
-                print("SYSTEM: Stop from back car")
-                 
-                print("SYSTEM: Please wait 3 seconds before pressing q/Q to quit")
-                 
+                fprint("SYSTEM: Stop from back car")
                 # IF THERE IS CAR IN FRONT OF ME, TELL IT TO STOP
                 if carinfront:
-                    try:
-                        message = json.dumps("S")
-                        tmpfsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
-                        print("SYSTEM: Send front to Stop")
-                         
-                    except:
-                        print("Send to front Stop from detectbevent failed")
-                         
-                # STOP
+                    fprint("SYSTEM: Send front to Stop")
+                    exc = "Send to front stop from detectbevent failed"
+                    sendsock(tmpfsock, "S", exc)
                 stop()
+                
             # IF BACK CAR NEEDS ME TO QUIT
             elif data == "\"Q\"":
-                print("SYSTEM: Quit from back car")
-                 
+                fprint("SYSTEM: Quit from back car")
                 # IF THERE IS CAR IN FRONT OF ME, TELL IT TO QUIT
                 if carinfront:
-                    try:
-                        message = json.dumps("Q")
-                        tmpfsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
-                        print("SYSTEM: Send front to Quit")
-                         
-                    except:
-                        print("Send to front Quit from detectbevent failed")
-                         
+                    fprint("SYSTEM: Send front to Quit")
+                    exc = "Send to front Quit from detectbevent failed"
+                    sendsock(tmpfsock, "Q", exc)
                 # UPDATE GLOBAL VARIABLE (ENDGAME) TO END SIMULATION
                 lock.acquire()
                 endgame = True
@@ -450,6 +454,7 @@ def sendbpos(sock):
         # IF SIMULATION ENDED, BREAK
         if endgame:
             break
+        
         # SEND MY POSITION TO BACK
         try:
             msg = json.dumps(mypos)
@@ -468,6 +473,7 @@ def updatefpos(caronback, tmpfsock, tmpbsock):
         # IF SIMULATION ENDED, BREAK
         if endgame:
             break
+        
         # RECEIVE MESSAGE FROM FRONT
         try:
             size = struct.unpack("i", tmpfsock.recv(struct.calcsize("i")))[0]
@@ -477,35 +483,31 @@ def updatefpos(caronback, tmpfsock, tmpbsock):
                 if not msg:
                     break
                 data += msg
+                
             # IF FRONT CAR NEEDS ME TO STOP
             if data == "\"S\"":
-                print("SYSTEM: Stop from front car\nSYSTEM: Please wait 3 seconds before pressing q/Q to quit")
+                fprint("SYSTEM: Stop from front car")
                 # IF THERE IS CAR ON BACK, TELL IT TO STOP
                 if caronback:
-                    try:
-                        message = json.dumps("S")
-                        tmpbsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
-                        print("SYSTEM: Sending back to Stop")
-                    except:
-                        print("Send to back Stop from updatefpos failed")
-                # STOP 
+                    fprint("SYSTEM: Sending back to Stop")
+                    exc = "Send to back Stop from updatefpos failed"
+                    sendsock(tmpbsock, "S", exc)
                 stop()
+                
             # IF FRONT CAR NEEDS ME TO QUIT 
             elif data == "\"Q\"":
-                print("SYSTEM: Quit from front car")
+                fprint("SYSTEM: Quit from front car")
                 # IF THERE IS CAR ON BACK, TELL IT TO QUIT
                 if caronback:
-                    try:
-                        message = json.dumps("Q")
-                        tmpbsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
-                        print("SYSTEM: Sending back to Quit")
-                    except:
-                        print("Send to back Quit from updatefpos failed")
+                    fprint("SYSTEM: Sending back to Quit")
+                    exc = "Send to back Quit from updatefpos failed"
+                    sendsock(tmpbsock, "Q", exc)
                 # UPDATE GLOBAL VARIABLE (ENDGAME) TO END SIMULATION
                 lock.acquire()
                 endgame = True
                 lock.release()
                 break
+            
             # IF MESSAGE WAS POSITION OF FRONT CAR, UPDATE GLOBAL VARIABLE (FRONTPOS)
             else:
                 lock.acquire()
@@ -519,84 +521,64 @@ def updatefpos(caronback, tmpfsock, tmpbsock):
 #-----------------------------------------------------------------------------
 def usrinput(carinfront, caronback, tmpfsock, tmpbsock):
     global endgame, myspeed, frontpos, mypos, lock, myspeed, maxspeed
-    button_delay = 0.0001
+    button_delay = 0.5
     while True:
         # IF SIMULATION ENDED, BREAK
         if endgame:
             break
+        
         # DETECT USER INPUT FROM TERMINAL
         key = getch()
         # IF KEY WAS 'd/D', ACCELERATE
         if (key == 'd' or key == 'D'):
-            print("SYSTEM: Accelerating..")
-            # ACCELERATE
+            fprint("SYSTEM: Accelerating..")
             accelerate(0.1)
-            # CALCULATE HEADWAY
+            # IF THERE IS A CAR IN FRONT AND HEADWAY IS TOO SMALL, TELL FRONT CAR TO ACCELERATE
             headway = getheadway()
-            # IF THERE IS A CAR IN FRONT
-            if carinfront:
-                # IF HEADWAY IS TOO SMALL, LET FRONT CAR TO ACCELERATE
-                if headway == -1:
-                    print("SYSTEM: Headway is too small, Send front car to accelerate")
-                    message = json.dumps("A")
-                    tmpfsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
+            if carinfront and headway == -1:
+                    fprint("SYSTEM: Headway is too small, Send front car to accelerate")
+                    exc = "Send front to accelerate from usrinput failed"
+                    sendsock(tmpfsock, "A", exc)
+                    
         # IF KEY WAS 'a/A', DECELERATE
         elif (key == 'a' or key == 'A'):
-            print("SYSTEM: Decelerating...")
-            # DECELERATE
+            fprint("SYSTEM: Decelerating...")
             decelerate()
-            # CALCULATE HEADWAY
+            # IF THERE IS CAR IN FRONT AND HEADWAY IS TOO BIG, TELL FRONT CAR TO DECELERATE
             headway = getheadway()
-            # IF THERE IS CAR IN FRONT
-            if carinfront:
-                # IF HEADWAY IS TOO BIG, LET FRONT CAR TO DECELERETAE
-                if headway == 1:
-                    print("SYSTEM: Headway is too big, Send front car to decelerate")
-                    message = json.dumps("D")
-                    tmpfsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
+            if carinfront and headway == 1:
+                    fprint("SYSTEM: Headway is too big, Send front car to decelerate")
+                    exc = "Send front to decelerate from usrinput failed"
+                    sendsock(tmpfsock, "D", exc)
+        
         # IF KEY WAS 's/S', STOP
         elif (key == 's' or key == 'S'):
-            print("SYSTEM: Stopping...")
-            # IF THERE IS CAR IN FRONT, LET FRONT CAR TO STOP
+            fprint("SYSTEM: Stopping...")
+            # IF THERE IS CAR IN FRONT, TELL FRONT CAR TO STOP
             if carinfront:
-                try:
-                    message = json.dumps("S")
-                    tmpfsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
-                    print("SYSTEM: Send front to Stop")
-                except:
-                    print("Send to front Stop failed in usrinput")
-                     
-            # IF THERE IS CAR ON BACK, LET BACK CAR TO STOP
+                fprint("SYSTEM: Send front to Stop")
+                exc = "Send to front Stop failed in usrinput"
+                sendsock(tmpfsock, "S", exc)
+            # IF THERE IS CAR ON BACK, TELL BACK CAR TO STOP
             if caronback:
-                try:
-                    message = json.dumps("S")
-                    tmpbsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
-                    print("SYSTEM: Send back to Stop")
-                except:
-                    print("Send to back Stop failed in usrinput")
-            # STOP
+                fprint("SYSTEM: Send back to Stop")
+                exc = "Send to back Stop failed in usrinput"
+                sendsock(tmpbsock, "S", exc)
             stop()
-            print("SYSTEM: Please wait 3 seconds before pressing q/Q to quit")
+            
         # IF KEY WAS 'q/Q', QUIT
         elif (key == 'q' or key == 'Q'):
-            print("SYSTEM: Ending simulation...")
-            # IF THERE IS CAR IN FRONT, LET FRONT CAR TO QUIT
+            fprint("SYSTEM: Ending simulation...")
+            # IF THERE IS CAR IN FRONT, TELL FRONT CAR TO QUIT
             if carinfront:
-                try:
-                    message = json.dumps("Q")
-                    tmpfsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
-                    print("SYSTEM: Send front to Quit")
-                except:
-                    print("Send to front Quit failed in usrinput")
-            # IF THERE IS CAR ON BACK, LET BACK CAR TO QUIT
+                fprint("SYSTEM: Send front to Quit")
+                exc = "Send to front Quit failed in usrinput"
+                sendsock(tmpfsock, "Q", exc)
+            # IF THERE IS CAR ON BACK, TELL BACK CAR TO QUIT
             if caronback:
-                try:
-                    message = json.dumps("Q")
-                    tmpbsock.send(struct.pack("i", len(message))+message.encode("utf-8"))
-                    print("SYSTEM: Send back to Quit")
-                except:
-                    print("Send to back Quit failed in usrinput")
-                     
+                fprint("SYSTEM: Send back to Quit")
+                exc = "Send to back Quit failed in usrinput"
+                sendsock(tmpbsock, "Q", exc)                     
             # UPDATE GLOBAL VARIABLE (ENDGAME) TO END SIMULATION
             lock.acquire()
             endgame = True
@@ -623,7 +605,7 @@ def accelerateH(headway, acc_change):
     global maxheadway, myspeed, maxspeed, lock
     # UPDATE GLOBAL VARIABLE (MYSPEED)
     lock.acquire()
-    # IF HEADWAY IS NOT TOO BIG, INCREASE SPEED
+    # IF HEADWAY IS NOT TOO BIG AND MYSPEED IS LESS THAN MAX, INCREASE SPEED
     if headway < maxheadway:
         myspeed += acc_change
     lock.release()
@@ -656,7 +638,7 @@ def stop():
 # SET CURRENT POSITION
 #-----------------------------------------------------------------------------
 def setpos():
-    global myspeed, mypos, lock
+    global myspeed, maxspeed, mypos, lock
     # UPDATE ON GLOBAL VARIABLE (MYSPEED, MYPOS)
     lock.acquire()
     # IF SPEED IS NEGATIVE, SET TO 0
@@ -675,7 +657,6 @@ def setpos():
 #-----------------------------------------------------------------------------
 def getheadway():
     global frontpos, mypos, maxheadway, minheadway, lock
-    
     # IF THERE IS NO FRONT CAR
     if frontpos == -1:
         return 0
@@ -690,8 +671,8 @@ def getheadway():
         return 1
     # HEADWAY TOO SMALL
     elif headway < minheadway:
-        # CRASH
-        if headway <= 0:
+        # CRASH (CAR WIDTH = 100, EACH CAR POS = CENTER OF CAR'S LOCATION)
+        if headway <= 100:
             return -10
         else:
             return -1

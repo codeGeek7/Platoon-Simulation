@@ -109,6 +109,9 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
 #    time.sleep(1)
     global dataList, lock, prev, speed, simulationExit
     print("\nSYSTEM: STARTING THE PLATOON SIMULATION.")
+    positionFile = open("positionFile.txt", "w")
+    headwayFile = open("headwayFile.txt", "w")
+    speedFile = open("speedFile.txt", "w")
     
     start_x = list(range(1,len(clientList)+1))
     start_x = [item*150 - 50 for item in start_x]
@@ -158,8 +161,8 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
     bushSep = 240
     bush = [bushSep*(i+1) - 100 for i in range(display_width//treeSep)]
     treeSpeed = 0
-    y1 = 450
-    y2 = 750
+    y1 = int(display_height/2 - 150)
+    y2 = int(display_height/2 + 150)
     d = display_width*7/10
     limit = list(range(1,11))
     limit = [float(i*d) for i in limit]
@@ -244,7 +247,7 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
             textRect_text = text.get_rect()
             textRect_pos = textSurf_pos.get_rect()
             textRect_text.center = (display_width/240 + 100, 25*(i+1))
-            textRect_pos.center = (display_width/240 + 180, 25*(i+1))
+            textRect_pos.center = (display_width/240 + 190, 25*(i+1))
             gameDisplay.blit(textSurf_pos, textRect_pos)
             gameDisplay.blit(text, textRect_text)
 #        pygame.display.update()
@@ -271,6 +274,19 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
 
 #        time.sleep(0.000001)
         print("POSITIONS RECEIVED: {}".format([float(value) for key, value in dataList.items()]))
+
+        for key, value in dataList.items():
+            positionFile.write("%f "%float(value))
+        positionFile.write("\n")
+        
+        for key, value in speed.items():
+            speedFile.write("%f "%float(value))
+        speedFile.write("\n")
+        
+        for item in headway.enumerate():
+            headwayFile.write("%f "%float(item))
+        headwayFile.write("\n")
+        
 #        print("SPEEDS RECEIVED: {}".format([float(value) for key, value in speed.items()]))
 #            print([float(dataList[i]) - float(dataList[i+1]) for i in range(lesleepTimen(dataList) - 1)])
             
@@ -363,8 +379,8 @@ def draw_background(gameDisplay, display_width, display_height, black, tree, bus
     road_9 = (184, 184, 184)
     road_10 = (192, 192, 192)
     
-    ground_1 = (0, 192, 0)
-    ground_2 = (0, 204, 0)
+    ground_1 = (0, 176, 0)
+    ground_2 = (0, 192, 0)
     
     green = (0, 125, 0)
     darkGreen = (0, 100, 0)
