@@ -27,6 +27,7 @@ minheadway = 150        # MIN HEADWAY
 def initialize():
     # INITIALIZE SOCKET FOR SERVER
     sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sockfd.settimeout(15)
     host = socket.gethostbyname('cray')
     port = 6789
     os.system('clear')
@@ -71,7 +72,7 @@ def requestMyID(sockfd, reqOpt, BUFSIZE = 4096):
         print("SYSTEM: My position (ID) is : " + myID)
         return myID
     except:
-        print("Could not receive my ID from server")
+        print("Could not connect to server")
         sys.exit()
 
 #-----------------------------------------------------------------------------

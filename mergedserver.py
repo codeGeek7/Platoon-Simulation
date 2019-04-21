@@ -109,9 +109,10 @@ def start_simulation(clientList, clientSockList, BUFSIZE = 4096):
 #    time.sleep(1)
     global dataList, lock, prev, speed, simulationExit
     print("\nSYSTEM: STARTING THE PLATOON SIMULATION.")
-    positionFile = open("positionFile.txt", "w")
-    headwayFile = open("headwayFile.txt", "w")
-    speedFile = open("speedFile.txt", "w")
+    fileprefix = "demo1_"
+    positionFile = open(fileprefix + "positionFile.txt", "w")
+    headwayFile = open(fileprefix + "headwayFile.txt", "w")
+    speedFile = open(fileprefix + "speedFile.txt", "w")
     
     start_x = list(range(1,len(clientList)+1))
     start_x = [item*150 - 50 for item in start_x]
